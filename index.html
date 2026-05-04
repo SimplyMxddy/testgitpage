@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birthday Mission 🫡</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: rgba(255,255,255,0.08);
+    --accent: #7c6af7;
+    --accent2: #f76a8c;
+    --accent3: #6af7c8;
+    --text: #f0f0f8;
+    --muted: #888899;
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    overflow: hidden;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-wrap {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+  }
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.6s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+    border-radius: 0 2px 2px 0;
+  }
+  #progress-dots {
+    position: fixed;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 6px;
+    z-index: 100;
+  }
+  .pdot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    transition: background 0.4s, transform 0.3s;
+  }
+  .pdot.active {
+    background: var(--accent);
+    transform: scale(1.4);
+  }
+  .pdot.done {
+    background: var(--accent3);
+  }
+
+  /* ── PAGES ── */
+  .page {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    overflow-y: auto;
+  }
+  .page.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+  .page.exit {
+    opacity: 0;
+    transform: translateY(-30px);
+    pointer-events: none;
+  }
+
+  /* ── BACKGROUNDS ── */
+  #page1 { background: radial-gradient(ellipse at 30% 40%, #1a1040 0%, #0a0a0f 60%), radial-gradient(ellipse at 80% 80%, #0d2040 0%, transparent 50%); }
+  #page2 { background: radial-gradient(ellipse at 70% 30%, #1a0a25 0%, #0a0a0f 60%); }
+  #page3 { background: radial-gradient(ellipse at 50% 20%, #0d1a10 0%, #0a0a0f 70%); }
+  #page4 { background: radial-gradient(ellipse at 50% 50%, #1a100d 0%, #0a0a0f 60%); }
+  #page5 { background: radial-gradient(ellipse at 50% 50%, #0d0d20 0%, #0a0a0f 70%); }
+
+  /* ── NOISE OVERLAY ── */
+  .page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .big-emoji {
+    font-size: clamp(60px, 18vw, 100px);
+    line-height: 1;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  h1 {
+    font-size: clamp(36px, 10vw, 64px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    text-align: center;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .sub {
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+    font-family: var(--mono);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-family: var(--font);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.15);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .btn:hover::after { opacity: 1; }
+  .btn:active { transform: scale(0.94); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #9b59f7);
+    color: #fff;
+    box-shadow: 0 4px 24px rgba(124,106,247,0.4);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 6px 32px rgba(124,106,247,0.6);
+  }
+
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  /* ── TYPEWRITER ── */
+  #typewriter-text, #typewriter-text2 {
+    font-size: clamp(16px, 4.5vw, 22px);
+    line-height: 1.7;
+    text-align: center;
+    max-width: 380px;
+    color: var(--text);
+    min-height: 120px;
+    margin-bottom: 32px;
+  }
+  .cursor-blink {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--accent);
+    vertical-align: middle;
+    margin-left: 2px;
+    animation: blink 0.8s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── DOORS ── */
+  #doors-container {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 24px 0;
+    width: 100%;
+    max-width: 420px;
+  }
+  .door {
+    flex: 1;
+    min-width: 90px;
+    max-width: 120px;
+    aspect-ratio: 0.6;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .door::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);
+  }
+  .door:hover {
+    transform: translateY(-4px) scale(1.03);
+    border-color: rgba(124,106,247,0.5);
+    box-shadow: 0 8px 32px rgba(124,106,247,0.2);
+  }
+  .door:active { transform: scale(0.96); }
+  .door.shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97);
+  }
+  @keyframes shake {
+    10%,90%{transform:translateX(-2px)}
+    20%,80%{transform:translateX(4px)}
+    30%,50%,70%{transform:translateX(-5px)}
+    40%,60%{transform:translateX(5px)}
+  }
+  .door.wrong {
+    border-color: #f76a6a;
+    background: rgba(247,106,106,0.08);
+  }
+  .door.correct {
+    border-color: var(--accent3);
+    background: rgba(106,247,200,0.1);
+  }
+  .door-emoji { font-size: 52px; line-height: 1; }
+  .door-label {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── STATUS ── */
+  #game-status {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 20px;
+    transition: color 0.3s;
+  }
+  #game-status.wrong { color: #f76a8c; }
+  #game-status.correct { color: var(--accent3); }
+
+  .tries-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .tries-badge span { color: var(--accent); font-weight: 700; }
+
+  /* ── RESULT CARD ── */
+  #result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 28px;
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+  }
+  .result-emoji { font-size: 64px; margin-bottom: 16px; }
+  .result-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .result-sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* ── FINAL PAGE ── */
+  #page5-inner {
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 200;
+    display: none;
+  }
+
+  /* ── DECORATIVE STARS ── */
+  .stars {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .star {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    animation: twinkle var(--dur, 3s) var(--delay, 0s) ease-in-out infinite;
+  }
+  @keyframes twinkle { 0%,100%{opacity:0.3}50%{opacity:1} }
+
+  /* ── PAGE1 GLOW ── */
+  .glow-ring {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,106,247,0.15) 0%, transparent 70%);
+    pointer-events: none;
+    animation: pulse-glow 4s ease-in-out infinite;
+  }
+  @keyframes pulse-glow { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.2);opacity:1} }
+
+  /* game header text */
+  .game-title {
+    font-size: clamp(22px, 6vw, 32px);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .game-desc {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- PROGRESS -->
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="progress-dots">
+  <div class="pdot" id="dot0"></div>
+  <div class="pdot" id="dot1"></div>
+  <div class="pdot" id="dot2"></div>
+  <div class="pdot" id="dot3"></div>
+  <div class="pdot" id="dot4"></div>
+</div>
+
+<!-- CONFETTI CANVAS -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- ═══════════════════ PAGE 1 — INTRO ═══════════════════ -->
+<div class="page active" id="page1">
+  <div class="stars" id="stars1"></div>
+  <div class="glow-ring"></div>
+  <div class="big-emoji">🫡</div>
+  <h1>Namaste</h1>
+  <p style="font-size:clamp(18px,5vw,26px);font-weight:600;text-align:center;margin-bottom:6px;background:linear-gradient(135deg,#f76a8c,#7c6af7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Rishitha 🎂</p>
+  <p class="sub">// classified mission incoming</p>
+  <button class="btn btn-primary" id="btn-start">Start Mission 🫡</button>
+</div>
+
+<!-- ═══════════════════ PAGE 2 — TYPEWRITER ═══════════════════ -->
+<div class="page" id="page2">
+  <div class="stars" id="stars2"></div>
+  <p class="sub" style="margin-bottom:24px;">// mission briefing</p>
+  <div id="typewriter-text"></div>
+  <button class="btn btn-primary" id="btn-continue" style="display:none; opacity:0; transform:translateY(10px); transition: opacity 0.4s, transform 0.4s;">Continue 🫡</button>
+</div>
+
+<!-- ═══════════════════ PAGE 3 — DOOR GAME ═══════════════════ -->
+<div class="page" id="page3">
+  <div class="stars" id="stars3"></div>
+  <div class="game-title">Pick The Right Door</div>
+  <div class="game-desc">// one is correct. luck + brain = win 🫡</div>
+  <div class="tries-badge">Tries: <span id="try-count">0</span></div>
+  <div id="doors-container">
+    <div class="door" data-idx="0">
+      <div class="door-emoji">🚪</div>
+      <div class="door-label">DOOR 01</div>
+    </div>
+    <div class="door" data-idx="1">
+      <div class="door-emoji">🚪</div>
+      <div class="door-label">DOOR 02</div>
+    </div>
+    <div class="door" data-idx="2">
+      <div class="door-emoji">🚪</div>
+      <div class="door-label">DOOR 03</div>
+    </div>
+  </div>
+  <div id="game-status">Choose a door...</div>
+</div>
+
+<!-- ═══════════════════ PAGE 4 — RESULT ═══════════════════ -->
+<div class="page" id="page4">
+  <div class="stars" id="stars4"></div>
+  <div id="result-card">
+    <div class="result-emoji" id="result-emoji">🎯</div>
+    <div class="result-title" id="result-title">Loading...</div>
+    <div class="result-sub" id="result-sub">...</div>
+    <button class="btn btn-primary" id="btn-final">See Birthday Message 🎂</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 5 — FINAL MESSAGE ═══════════════════ -->
+<div class="page" id="page5">
+  <div class="stars" id="stars5"></div>
+  <div id="page5-inner">
+    <p class="sub" style="margin-bottom:24px;">// transmission complete</p>
+    <div id="typewriter-text2"></div>
+    <button class="btn btn-primary" id="btn-bye" style="display:none; opacity:0; transform:translateY(10px); transition: opacity 0.5s, transform 0.5s;">Byee 🫡</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let currentPage = 0;
+let tries = 0;
+let correctDoor = Math.floor(Math.random() * 3);
+let gameActive = false;
+
+// ══════════════════════════════════════════════
+//  STARS
+// ══════════════════════════════════════════════
+function makeStars(containerId, count) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--delay:${Math.random()*4}s;opacity:${0.3+Math.random()*0.7}`;
+    c.appendChild(s);
+  }
+}
+['stars1','stars2','stars3','stars4','stars5'].forEach(id => makeStars(id, 40));
+
+// ══════════════════════════════════════════════
+//  PAGE TRANSITIONS
+// ══════════════════════════════════════════════
+const pages = document.querySelectorAll('.page');
+const progressBar = document.getElementById('progress-bar');
+const dots = document.querySelectorAll('.pdot');
+
+function goToPage(n) {
+  const prev = currentPage;
+  pages[prev].classList.remove('active');
+  pages[prev].classList.add('exit');
+  setTimeout(() => pages[prev].classList.remove('exit'), 600);
+
+  currentPage = n;
+  pages[n].classList.add('active');
+
+  // progress
+  const pct = (n / (pages.length - 1)) * 100;
+  progressBar.style.width = pct + '%';
+
+  dots.forEach((d, i) => {
+    d.classList.remove('active', 'done');
+    if (i < n) d.classList.add('done');
+    else if (i === n) d.classList.add('active');
+  });
+
+  // page-specific init
+  if (n === 1) startTypewriter1();
+  if (n === 2) initGame();
+  if (n === 4) startTypewriter2();
+}
+
+// init dots
+dots[0].classList.add('active');
+
+// ══════════════════════════════════════════════
+//  TYPEWRITER
+// ══════════════════════════════════════════════
+function typeWriter(el, text, speed, onDone) {
+  let i = 0;
+  el.innerHTML = '';
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor-blink';
+  el.appendChild(cursor);
+
+  function type() {
+    if (i < text.length) {
+      cursor.insertAdjacentText('beforebegin', text[i]);
+      i++;
+      setTimeout(type, speed + (Math.random() * 20 - 10));
+    } else {
+      cursor.style.animationIterationCount = '3';
+      setTimeout(() => {
+        cursor.remove();
+        if (onDone) onDone();
+      }, 800);
+    }
+  }
+  type();
+}
+
+function startTypewriter1() {
+  const el = document.getElementById('typewriter-text');
+  const msg = "🫡 this is your birthday mission...\nonly luck + brain combo can pass this 🫡";
+  setTimeout(() => {
+    typeWriter(el, msg, 45, () => {
+      const btn = document.getElementById('btn-continue');
+      btn.style.display = 'inline-flex';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        btn.style.opacity = '1';
+        btn.style.transform = 'translateY(0)';
+      }));
+    });
+  }, 300);
+}
+
+function startTypewriter2() {
+  const el = document.getElementById('typewriter-text2');
+  const msg = `Happy Birthday Rishitha 🎂\n\nThanks for being my friend...\n\nWe were in the same bus and still didn't talk for so long 💀\n\nBut somehow we became friends\nThanks to Dmart and for msging me first\nI would have never messaged first cuz of my nervousness lmao 😂\n\nanyways enough of my yapping...\n\nHope you have a good day 🫡`;
+  setTimeout(() => {
+    typeWriter(el, msg, 30, () => {
+      const btn = document.getElementById('btn-bye');
+      btn.style.display = 'inline-flex';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        btn.style.opacity = '1';
+        btn.style.transform = 'translateY(0)';
+      }));
+    });
+  }, 400);
+}
+
+// ══════════════════════════════════════════════
+//  DOOR GAME
+// ══════════════════════════════════════════════
+function initGame() {
+  tries = 0;
+  correctDoor = Math.floor(Math.random() * 3);
+  gameActive = true;
+  document.getElementById('try-count').textContent = '0';
+  document.getElementById('game-status').textContent = 'Choose a door...';
+  document.getElementById('game-status').className = '';
+  resetDoorStyles();
+}
+
+function resetDoorStyles() {
+  document.querySelectorAll('.door').forEach(d => {
+    d.classList.remove('wrong', 'correct', 'shake');
+    d.style.pointerEvents = '';
+    d.querySelector('.door-emoji').textContent = '🚪';
+  });
+}
+
+function shuffleDoors() {
+  // Pick a new random correct door (by data-idx 0,1,2) — no DOM shuffling
+  // so labels always stay Door 01, 02, 03 in order
+  correctDoor = Math.floor(Math.random() * 3);
+}
+
+document.querySelectorAll('.door').forEach(door => {
+  door.addEventListener('click', function() {
+    if (!gameActive) return;
+    const idx = parseInt(this.getAttribute('data-idx'));
+    tries++;
+    document.getElementById('try-count').textContent = tries;
+
+    if (idx === correctDoor) {
+      // CORRECT
+      gameActive = false;
+      this.classList.add('correct');
+      this.querySelector('.door-emoji').textContent = '✅';
+      const status = document.getElementById('game-status');
+      status.textContent = 'Found it! 🫡';
+      status.className = 'correct';
+
+      setTimeout(() => {
+        showResult();
+        goToPage(3);
+      }, 900);
+    } else {
+      // WRONG
+      this.classList.add('wrong', 'shake');
+      this.querySelector('.door-emoji').textContent = '❌';
+      const status = document.getElementById('game-status');
+      status.textContent = 'Wrong door 🫡 try again';
+      status.className = 'wrong';
+
+      setTimeout(() => {
+        this.classList.remove('wrong', 'shake');
+        this.querySelector('.door-emoji').textContent = '🚪';
+        status.textContent = 'Keep trying...';
+        status.className = '';
+        // randomize which door is correct next round
+        correctDoor = Math.floor(Math.random() * 3);
+      }, 700);
+    }
+  });
+});
+
+function showResult() {
+  let emoji, title, sub;
+  if (tries <= 3) {
+    emoji = '🎯';
+    title = 'Eyyuu Topper 🫡';
+    sub = `Less than 3 tries — absolute legend behavior. ${tries} ${tries === 1 ? 'try' : 'tries'} only.`;
+  } else if (tries <= 10) {
+    emoji = '😭';
+    title = 'hmmm whyyy soo many tries 🫡';
+    sub = `It took you ${tries} tries... the brain cell was on vacation?`;
+  } else {
+    emoji = '💀';
+    title = 'idk why but damn';
+    sub = `${tries} tries?? 🫡 that's a new record. respect the commitment tho.`;
+  }
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent = sub;
+}
+
+// ══════════════════════════════════════════════
+//  CONFETTI
+// ══════════════════════════════════════════════
+function launchConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const colors = ['#7c6af7','#f76a8c','#6af7c8','#f7c86a','#ffffff','#f76af7','#6ab5f7'];
+  const pieces = [];
+
+  for (let i = 0; i < 180; i++) {
+    pieces.push({
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * canvas.height * 0.5,
+      r: 4 + Math.random() * 6,
+      d: 1 + Math.random() * 2.5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.random() * 20 - 10,
+      tiltAngle: 0,
+      tiltSpeed: 0.05 + Math.random() * 0.1,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle',
+      w: 6 + Math.random() * 8,
+      h: 4 + Math.random() * 6,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.15
+    });
+  }
+
+  let frame = 0;
+  let animId;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame++;
+    let alive = false;
+    pieces.forEach(p => {
+      p.y += p.d;
+      p.x += Math.sin(frame * 0.01 + p.tiltAngle) * 1.5;
+      p.tiltAngle += p.tiltSpeed;
+      p.rotation += p.rotSpeed;
+      if (p.y < canvas.height + 20) alive = true;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation);
+      ctx.globalAlpha = p.y < canvas.height ? 1 : Math.max(0, 1 - (p.y - canvas.height) / 40);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'rect') {
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    if (alive) animId = requestAnimationFrame(draw);
+    else {
+      canvas.style.display = 'none';
+      cancelAnimationFrame(animId);
+    }
+  }
+  draw();
+}
+
+// ══════════════════════════════════════════════
+//  EVENT LISTENERS
+// ══════════════════════════════════════════════
+document.getElementById('btn-start').addEventListener('click', () => goToPage(1));
+document.getElementById('btn-continue').addEventListener('click', () => goToPage(2));
+document.getElementById('btn-final').addEventListener('click', () => goToPage(4));
+document.getElementById('btn-bye').addEventListener('click', () => {
+  launchConfetti();
+  const btn = document.getElementById('btn-bye');
+  btn.textContent = '💜 take care!';
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+});
+</script>
+</body>
+</html>
